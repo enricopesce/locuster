@@ -8,14 +8,19 @@ from aws_cdk import (
 
 class AppStack(core.Stack):
 
-    def __init__(self, scope: core.Construct, id: str, *, vpc, target_url="", slaves=2, **kwargs) -> None:
+    def __init__(self, scope: core.Construct, id: str, vpc: ec2.IVpc, *, slaves=2, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
         cluster = ecs.Cluster(self, "cluster", vpc=vpc)
 
         locust_asset = ecr_assets.DockerImageAsset(self, 'locust', directory="docker", file="app/Dockerfile")
 
-        master_task = ecs.FargateTaskDefinition(self, "mastert")
+        master_task = ecs.FargateTaskDefinition(
+            self,
+            "mastert",
+            cpu=512,
+            memory_limit_mib=1024
+        )
 
         sg_slave = ec2.SecurityGroup(self, "sgslave", vpc=vpc, allow_all_outbound=True)
 
@@ -25,15 +30,9 @@ class AppStack(core.Stack):
 
         master_container = master_task.add_container(
             "masterc",
-            image=ecs.ContainerImage.from_ecr_repository(
-                locust_asset.repository,
-                locust_asset.image_uri[-64:]
-            ),
+            image=ecs.ContainerImage.from_docker_image_asset(locust_asset),
             logging=ecs.LogDriver.aws_logs(stream_prefix="master"),
-            environment={
-                "LOCUST_MODE": "master",
-                "TARGET_URL": target_url
-            }
+            command=["-f", "/mnt/locust/locustfile.py",  "--master"]
         )
 
         master_container.add_port_mappings(ecs.PortMapping(container_port=8089, host_port=8089))
@@ -97,20 +96,18 @@ class AppStack(core.Stack):
             )
         )
 
-        slave_task = ecs.FargateTaskDefinition(self, "slavet")
+        slave_task = ecs.FargateTaskDefinition(
+            self,
+            "slavet",
+            cpu=2048,
+            memory_limit_mib=4096
+        )
 
         slave_task.add_container(
             "slavec",
-            image=ecs.ContainerImage.from_ecr_repository(
-                locust_asset.repository,
-                locust_asset.image_uri[-64:]
-            ),
+            image=ecs.ContainerImage.from_docker_image_asset(locust_asset),
             logging=ecs.LogDriver.aws_logs(stream_prefix="slave"),
-            environment={
-                "LOCUST_MODE": "slave",
-                "TARGET_URL": target_url,
-                "LOCUST_MASTER_HOST": nlb.load_balancer_dns_name
-            }
+            command=["-f", "/mnt/locust/locustfile.py", "--worker", "--master-host", nlb.load_balancer_dns_name]
         )
 
         ecs.FargateService(

@@ -1,33 +1,20 @@
-version: "3.7"
+version: '3'
+
 services:
   master:
     build:
       context: .
       dockerfile: app/Dockerfile
     ports:
-      - "8089:8089"
+     - "8089:8089"
     volumes:
-      - ./code:/src
-    environment:
-      - LOCUST_MODE=master
-      - TARGET_URL=https://www.example.com
-  slave1:
+      - ./code:/mnt/locust/
+    command: -f /mnt/locust/locustfile.py --master -H https://www.google.it
+
+  worker:
     build:
       context: .
       dockerfile: app/Dockerfile
     volumes:
-      - ./code:/src
-    environment:
-      - LOCUST_MODE=slave
-      - LOCUST_MASTER_HOST=master
-      - TARGET_URL=https://www.example.com
-  slave2:
-    build:
-      context: .
-      dockerfile: app/Dockerfile
-    volumes:
-      - ./code:/src
-    environment:
-      - LOCUST_MODE=slave
-      - LOCUST_MASTER_HOST=master
-      - TARGET_URL=https://www.example.com
+      - ./code:/mnt/locust
+    command: -f /mnt/locust/locustfile.py --worker --master-host master

@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-
-import validators
 from aws_cdk import core
 from locuster.app_stack import AppStack
 from locuster.vpc_stack import VpcStack
@@ -15,11 +13,7 @@ app = core.App()
 
 context = app.node.try_get_context("target_url")
 
-if validators.url(context):
-    stack_vpc = VpcStack(app,"locuster-vpc", env=env)
-    stack_app = AppStack(app, "locuster", vpc=stack_vpc.vpc, target_url=context,
-                     slaves=2, env=env)
-else:
-    print("The target_url is not a valid URL")
+stack_vpc = VpcStack(app,"locuster-vpc", env=env, from_vpc_name="VPC-RD")
+stack_app = AppStack(app, "locuster", vpc=stack_vpc.vpc, slaves=10, env=env)
 
 app.synth()
