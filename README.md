@@ -38,7 +38,7 @@ Deploy locust:
 ```bash
 export AWS_PROFILE="profilename"
 export AWS_DEFAULT_REGION="eu-west-1"
-cdk deploy locuster --context target_url=https://www.example.com
+cdk deploy locuster
 
 .....
 
@@ -54,7 +54,7 @@ locuster.LocustWebConsole = http://locus-nbala-15IY958M7LUVF-ab8bf6ee96743c80.el
 Destroy locust:
 
 ```bash
-cdk destroy locuster --context target_url=https://www.example.com
+cdk destroy locuster
 ```
 
 Local test:
@@ -63,7 +63,7 @@ Local test:
 
 ```bash
 cd docker
-docker-compose up
+docker-compose up --scale worker=2 --build
 ```
 
 Customize the loucustfile test code:
