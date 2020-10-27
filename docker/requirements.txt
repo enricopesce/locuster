@@ -1,3 +1,4 @@
 urllib3
 locust
 bs4
+selenium
