@@ -1,54 +1,27 @@
-import random
-import re
-
-from bs4 import BeautifulSoup
-from locust import HttpUser, SequentialTaskSet, task, constant, tag
+from locusts import HeadlessChromeLocust
+from locust import TaskSet, task
 
 
-class RandomWalk(SequentialTaskSet):
-    index_urls = []
-    subpage_urls = []
+class LocustUserBehavior(TaskSet):
 
-    def on_start(self):
-        # self.client.verify = False
-        self.cookies = {
-            'example': 'abc'}
+    def open_locust_homepage(self):
+        self.client.get("https://www.pixartprinting.co.uk/")
 
-    def load_random_page(self):
-        url = random.choice(self.index_urls)
-        r = self.client.get(url, cookies=self.cookies).text
-        bs = BeautifulSoup(r, "html.parser")
-        hrefs = bs.findAll('a', attrs={'href': re.compile("^/")})
-        self.index_urls = [
-            href.get('href') for href in hrefs
-        ]
+    #def click_through_to_documentation(self):
+    #    self.client.find_element_by_xpath('//a[text()="Documentation"]').click()
+    #    self.client.wait.until(EC.visibility_of_element_located((By.XPATH, '//h1[text()="Locust Documentation"]')), "documentation is visible")
 
-    @tag('LoadHome')
-    @task
-    def home(self):
-        r = self.client.get("/", cookies=self.cookies).text
-        bs = BeautifulSoup(r, "html.parser")
-        hrefs = bs.findAll('a', attrs={'href': re.compile("^/.")})
-        self.index_urls = [
-            href.get('href') for href in hrefs
-        ]
-
-    @tag('LoadFirstRandom')
-    @task
-    def second_task(self):
-        self.load_random_page()
-
-    @tag('LoadSecondRandom')
-    @task
-    def third_task(self):
-        self.load_random_page()
-
-    @tag('LoadThirdRandom')
-    @task
-    def fourth_task(self):
-        self.load_random_page()
+    @task(1)
+    def homepage(self):
+        self.client.timed_event_for_locust("Go to", "homepage", self.open_locust_homepage)
+        #self.client.timed_event_for_locust("Click to", "documentation", self.click_through_to_documentation)
 
 
-class CustomerUser(HttpUser):
-    wait_time = constant(1)
-    tasks = [RandomWalk]
+class LocustUser(HeadlessChromeLocust):
+    host = "not really used"
+    timeout = 30 #in seconds in waitUntil thingies
+    min_wait = 100
+    max_wait = 200
+    screen_width = 1200
+    screen_height = 600
+    tasks = [LocustUserBehavior]
